@@ -28,49 +28,63 @@
 import paho.mqtt.client as mqtt
 import os, urlparse
 
-# Define event callbacks
-def on_connect(client, userdata, flags, rc):
-    print("rc: " + str(rc))
 
-def on_message(client, obj, msg):
-    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+class MQTTClient(object): 
 
-def on_publish(client, obj, mid):
-    print("mid: " + str(mid))
+	mqttc = None
+	cloudmqttUrl=None
 
-def on_subscribe(client, obj, mid, granted_qos):
-    print("Subscribed: " + str(mid) + " " + str(granted_qos))
+	def __init__(self, cloudmqttUrl):
+		self.cloudmqttUrl=cloudmqttUrl
 
-def on_log(client, obj, level, string):
-    print(string)
+	# Define event callbacks
+	def on_connect(self, client, userdata, flags, rc):
+	    print("rc: " + str(rc))
 
-mqttc = mqtt.Client()
-# Assign event callbacks
-mqttc.on_message = on_message
-mqttc.on_connect = on_connect
-mqttc.on_publish = on_publish
-mqttc.on_subscribe = on_subscribe
+	def on_message(self, client, obj, msg):
+	    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
 
-# Uncomment to enable debug messages
-#mqttc.on_log = on_log
+	def on_publish(self, client, obj, mid):
+	    print("mid: " + str(mid))
 
-# Parse CLOUDMQTT_URL (or fallback to localhost)
-url_str = os.environ.get('CLOUDMQTT_URL', 'mqtt://localhost:1883')
-url = urlparse.urlparse(url_str)
-topic = url.path[1:] or 'test'
+	def on_subscribe(self, client, obj, mid, granted_qos):
+	    print("Subscribed: " + str(mid) + " " + str(granted_qos))
 
-# Connect
-mqttc.username_pw_set(url.username, url.password)
-mqttc.connect(url.hostname, url.port)
+	def on_log(self, client, obj, level, string):
+	    print(string)
 
-# Start subscribe, with QoS level 0
-mqttc.subscribe(topic, 0)
+	def connect(self):
+		self.mqttc = mqtt.Client()
+		# Assign event callbacks
+		self.mqttc.on_message = self.on_message
+		self.mqttc.on_connect = self.on_connect
+		self.mqttc.on_publish = self.on_publish
+		self.mqttc.on_subscribe = self.on_subscribe
 
-# Publish a message
-mqttc.publish(topic, "my message")
+		# Uncomment to enable debug messages
+		self.mqttc.on_log = self.on_log
 
-# Continue the network loop, exit when an error occurs
-rc = 0
-while rc == 0:
-    rc = mqttc.loop()
-print("rc: " + str(rc))
+		# Parse CLOUDMQTT_URL (or fallback to localhost)
+		url_str = os.environ.get('CLOUDMQTT_URL', self.cloudmqttUrl)
+		url = urlparse.urlparse(url_str)
+		topic = url.path[1:] or 'test'
+		print("%s %s %s %s %s" %(url.username, url.password, url.path, url.hostname, url.port))
+		# Connect
+		self.mqttc.username_pw_set(url.username, url.password)
+		self.mqttc.connect(url.hostname, url.port)
+
+	def publishToTopic(self, topic, message):
+		self.mqttc.publish(topic, message)
+
+
+	def subscribeToTopic(self, topic):
+		self.mqttc.subscribe(topic, 0)
+		# Continue the network loop, exit when an error occurs
+		rc = 0
+		while rc == 0:
+		    rc = self.mqttc.loop()
+		print("rc: " + str(rc))
+
+
+
+
